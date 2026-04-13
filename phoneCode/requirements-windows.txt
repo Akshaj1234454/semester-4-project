@@ -1,0 +1,1 @@
+# Deprecated: location is now fetched from a Flask API endpoint.

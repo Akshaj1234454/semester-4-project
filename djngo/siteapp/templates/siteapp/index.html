@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Siteapp Map</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin:0; padding:0; height:100%; font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        #map { width:100%; height:100vh; z-index: 1; }
+
+        /* Top Navbar */
+        #navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+            gap: 16px;
+        }
+
+        #navbar .brand {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            color: #111827;
+            user-select: none;
+        }
+
+        #navbar .search {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: min(520px, 56vw);
+        }
+
+        #navbar .toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-left: 6px;
+            border-left: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        #navbar .toggle-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #111827;
+            user-select: none;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e2e8f0;
+            transition: 0.18s ease;
+            border-radius: 9999px;
+            border: 1px solid rgba(203, 213, 225, 0.9);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            top: 2px;
+            background-color: white;
+            transition: 0.18s ease;
+            border-radius: 9999px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        }
+
+        .switch input:checked + .slider {
+            background-color: #cbd5e1;
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        #navbar .search input {
+            width: 100%;
+            height: 40px;
+            border-radius: 9999px;
+            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0 14px;
+            outline: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        #navbar .search input::placeholder {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        #navbar .search input:focus {
+            border-color: #cbd5e1;
+            box-shadow: 0 0 0 4px rgba(203, 213, 225, 0.45);
+        }
+
+        #navbar .search button {
+            height: 40px;
+            border-radius: 9999px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            padding: 0 14px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        #navbar .search button:hover {
+            background: #f8fafc;
+        }
+
+        #navbar .search button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Floating Glassmorphism Header Panel */
+        #status-panel {
+            position: absolute;
+            top: 88px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 14px 28px;
+            border-radius: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none; /* Let map interactions pass through */
+        }
+        #status-panel::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #38a169;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(56, 161, 105, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(56, 161, 105, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(56, 161, 105, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 161, 105, 0); }
+        }
+
+        /* Cluster markers (IMPORTANT: don't animate transform on Leaflet-positioned element) */
+        .cluster-marker {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            background: transparent;
+        }
+
+        .cluster-bubble {
+            width: 40px;
+            height: 40px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #ff5e5e, #e60000);
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 12px rgba(230, 0, 0, 0.35);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: width 0.18s ease, height 0.18s ease, border-radius 0.18s ease, box-shadow 0.18s ease;
+            padding: 0;
+        }
+
+        .cluster-bubble:hover {
+            box-shadow: 0 6px 16px rgba(230, 0, 0, 0.5);
+            border-color: #ffe6e6;
+        }
+
+        .cluster-bubble__count {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .cluster-bubble__details {
+            display: none;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.95;
+            white-space: nowrap;
+        }
+
+        .cluster-bubble.expanded {
+            width: 170px;
+            height: 54px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #d93232, #a82222);
+            border-color: #ffb3b3;
+            box-shadow: 0 10px 24px rgba(179, 0, 0, 0.55);
+        }
+
+        .cluster-bubble.expanded .cluster-bubble__details {
+            display: block;
+        }
+
+        /* Modern Leaflet Popups */
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+        }
+        .leaflet-popup-content {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: #4a5568;
+            text-align: center;
+            margin: 14px 18px;
+        }
+        .leaflet-popup-content b {
+            color: #1a202c;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #a0aec0;
+            padding: 10px;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: #e53e3e;
+        }
+        .leaflet-popup-tip-container {
+            overflow: visible;
+        }
+        .leaflet-popup-tip {
+            box-shadow: 4px 4px 15px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        /* Cluster Panel List */
+        #cluster-panel {
+            position: absolute;
+            top: 88px;
+            right: 24px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            width: 280px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            padding: 20px;
+        }
+        #cluster-panel h3 {
+            margin: 0 0 16px 0;
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 12px;
+        }
+        #cluster-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .cluster-item {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cluster-item .delete-btn {
+            margin-left: 12px;
+            border: 0;
+            background: #e53e3e;
+            color: white;
+            border-radius: 8px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .cluster-item .delete-btn:hover {
+            background: #c53030;
+        }
+        .cluster-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-color: #cbd5e0;
+        }
+        .cluster-badge {
+            background: linear-gradient(135deg, #ff5e5e, #e60000);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(230, 0, 0, 0.3);
+        }
+        .cluster-coords {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 4px;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <header id="navbar" role="banner" aria-label="RoadWatch navigation">
+        <div class="brand">RoadWatch</div>
+        <form class="search" id="nav-search" autocomplete="off">
+            <input id="search-input" type="search" placeholder="Search a location (e.g., Noida Sector 62)" aria-label="Search location" />
+            <button id="search-btn" type="submit">Search</button>
+        </form>
+        <div class="toggle" aria-label="Map style">
+            <span class="toggle-label">Satellite</span>
+            <label class="switch" title="Toggle satellite view">
+                <input id="sat-toggle" type="checkbox" />
+                <span class="slider"></span>
+            </label>
+        </div>
+    </header>
+
+    <div id="status-panel"><span id="status">Loading interactive map...</span></div>
+    
+    <!-- Dialog Box for Clusters -->
+    <div id="cluster-panel">
+        <h3>Clusters</h3>
+        <ul id="cluster-list"></ul>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        console.log('Leaflet script loaded:', typeof L !== 'undefined');
+        const map = L.map('map').setView([28.4497964, 77.5843135], 11);
+
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+        });
+
+        const satelliteLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }
+        );
+
+        let activeBaseLayer = osmLayer;
+        activeBaseLayer.addTo(map);
+
+        const clusters = {{ clusters_json|safe }};
+
+        // Navbar location search
+        let searchMarker = null;
+        const navForm = document.getElementById('nav-search');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const statusEl = document.getElementById('status');
+
+        // Satellite toggle
+        const satToggle = document.getElementById('sat-toggle');
+        satToggle.addEventListener('change', () => {
+            map.removeLayer(activeBaseLayer);
+            activeBaseLayer = satToggle.checked ? satelliteLayer : osmLayer;
+            activeBaseLayer.addTo(map);
+        });
+
+        navForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const q = (searchInput.value || '').trim();
+            if (!q) return;
+
+            searchBtn.disabled = true;
+            const prevStatus = statusEl.innerText;
+            statusEl.innerText = `Searching: ${q}...`;
+
+            try {
+                const resp = await fetch(`/api/geocode/?q=${encodeURIComponent(q)}`);
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data && data.error ? data.error : 'Search failed');
+
+                if (searchMarker) map.removeLayer(searchMarker);
+                searchMarker = L.marker([data.lat, data.lng]).addTo(map);
+                map.flyTo([data.lat, data.lng], 14, { animate: true, duration: 1 });
+                statusEl.innerText = data.display_name || `Found: ${q}`;
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = prevStatus;
+            } finally {
+                searchBtn.disabled = false;
+            }
+        });
+
+        // Sort the clusters in descending order by point count for the list
+        clusters.sort((a, b) => b.count - a.count);
+        
+        const clusterListEl = document.getElementById('cluster-list');
+
+        // Road glow overlay (replaces the 2km circle)
+        let activeRoadGlowLayer = null;
+        let activeRoadGlowRequestId = 0;
+
+        const ROAD_HIGHLIGHT_RADIUS_M = 500;
+
+        function haversineMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function clipPolylineToRadius(coords, centerLat, centerLng, radiusM) {
+            const segments = [];
+            let current = [];
+
+            function addSegmentIfValid() {
+                if (current.length >= 2) segments.push(current);
+                current = [];
+            }
+
+            for (let i = 0; i < coords.length; i++) {
+                const [lat, lng] = coords[i];
+                const d = haversineMeters(centerLat, centerLng, lat, lng);
+                const inNow = d <= radiusM;
+
+                if (i === 0) {
+                    if (inNow) current.push([lat, lng]);
+                    continue;
+                }
+
+                const [pLat, pLng] = coords[i - 1];
+                const dPrev = haversineMeters(centerLat, centerLng, pLat, pLng);
+                const inPrev = dPrev <= radiusM;
+
+                // crossing handling (approximate linear interpolation)
+                if (inPrev !== inNow) {
+                    const denom = (d - dPrev);
+                    if (denom !== 0) {
+                        const t = (radiusM - dPrev) / denom;
+                        const iLat = pLat + (lat - pLat) * t;
+                        const iLng = pLng + (lng - pLng) * t;
+                        if (inPrev) {
+                            current.push([iLat, iLng]);
+                            addSegmentIfValid();
+                        } else {
+                            current.push([iLat, iLng]);
+                            current.push([lat, lng]);
+                        }
+                    } else {
+                        if (!inPrev && inNow) current.push([lat, lng]);
+                        if (inPrev && !inNow) addSegmentIfValid();
+                    }
+                    continue;
+                }
+
+                if (inNow) {
+                    // still inside radius
+                    if (current.length === 0) current.push([pLat, pLng]);
+                    current.push([lat, lng]);
+                } else {
+                    // still outside radius
+                    addSegmentIfValid();
+                }
+            }
+
+            if (current.length >= 2) segments.push(current);
+            return segments;
+        }
+
+        async function getRoadGlowLayerForCluster(cluster) {
+            if (cluster._roadGlowLayer) return cluster._roadGlowLayer;
+
+            const lat = cluster.lat;
+            const lng = cluster.lng;
+
+            const reqId = ++activeRoadGlowRequestId;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+
+            try {
+                let data = null;
+                let lastErr = null;
+
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    try {
+                        const resp = await fetch(`/api/roads/?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&r=${ROAD_HIGHLIGHT_RADIUS_M}`, {
+                            method: 'GET',
+                            signal: controller.signal,
+                            cache: 'no-store',
+                        });
+                        data = await resp.json();
+                        if (!resp.ok) throw new Error(data && data.error ? data.error : 'Roads fetch failed');
+                        break;
+                    } catch (e) {
+                        lastErr = e;
+                        // brief backoff then retry once
+                        await new Promise(r => setTimeout(r, 350));
+                    }
+                }
+
+                if (!data) throw lastErr || new Error('Roads fetch failed');
+                if (reqId !== activeRoadGlowRequestId) throw new Error('Stale request');
+
+                const group = L.layerGroup();
+                const ways = (data && Array.isArray(data.ways)) ? data.ways : [];
+                for (const coords of ways) {
+                    if (!Array.isArray(coords) || coords.length < 2) continue;
+
+                    // Only draw segments that lie within the 500m radius.
+                    const segments = clipPolylineToRadius(coords, lat, lng, ROAD_HIGHLIGHT_RADIUS_M);
+                    if (!segments.length) continue;
+
+                    for (const seg of segments) {
+                        // Orange glow pass
+                        L.polyline(seg, {
+                            color: '#ff8a00',
+                            weight: 14,
+                            opacity: 0.26,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            interactive: false,
+                        }).addTo(group);
+
+                        // Orange core pass
+                        L.polyline(seg, {
+                            color: '#ff8a00',
+                            weight: 5,
+                            opacity: 0.92,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            interactive: false,
+                        }).addTo(group);
+                    }
+                }
+
+                cluster._roadGlowLayer = group;
+                return group;
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        // Warm road cache for top clusters so highlight feels instant.
+        async function warmRoadCacheForTopClusters(limit = 4) {
+            const n = Math.min(limit, clusters.length);
+            for (let i = 0; i < n; i++) {
+                const c = clusters[i];
+                try {
+                    await fetch(`/api/roads/?lat=${encodeURIComponent(c.lat)}&lng=${encodeURIComponent(c.lng)}&r=${ROAD_HIGHLIGHT_RADIUS_M}`, { cache: 'no-store' });
+                } catch (_) {
+                    // ignore
+                }
+                await new Promise(r => setTimeout(r, 250));
+            }
+        }
+
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => warmRoadCacheForTopClusters(4), { timeout: 2000 });
+        } else {
+            setTimeout(() => warmRoadCacheForTopClusters(4), 900);
+        }
+
+        clusters.forEach((cluster, index) => {
+            const icon = L.divIcon({
+                className: 'cluster-marker',
+                html: `
+                    <div class="cluster-bubble" data-count="${cluster.count}">
+                        <div class="cluster-bubble__count">${cluster.count}</div>
+                        <div class="cluster-bubble__details">Potholes reported: ${cluster.count}</div>
+                    </div>
+                `,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
+            });
+
+            const marker = L.marker([cluster.lat, cluster.lng], { icon: icon }).addTo(map);
+
+            marker.on('click', function(e) {
+                const el = marker.getElement();
+                const bubble = el.querySelector('.cluster-bubble');
+                const countEl = el.querySelector('.cluster-bubble__count');
+                const detailsEl = el.querySelector('.cluster-bubble__details');
+
+                if (bubble.classList.contains('expanded')) {
+                    bubble.classList.remove('expanded');
+                    countEl.innerText = bubble.dataset.count;
+                    detailsEl.innerText = `Potholes reported: ${bubble.dataset.count}`;
+
+                    if (activeRoadGlowLayer) {
+                        map.removeLayer(activeRoadGlowLayer);
+                        activeRoadGlowLayer = null;
+                    }
+                } else {
+                    document.querySelectorAll('.cluster-bubble.expanded').forEach(b => {
+                        b.classList.remove('expanded');
+                        const c = b.querySelector('.cluster-bubble__count');
+                        if (c && b.dataset.count) c.innerText = b.dataset.count;
+                        const d = b.querySelector('.cluster-bubble__details');
+                        if (d && b.dataset.count) d.innerText = `Potholes reported: ${b.dataset.count}`;
+                    });
+
+                    if (activeRoadGlowLayer) {
+                        map.removeLayer(activeRoadGlowLayer);
+                        activeRoadGlowLayer = null;
+                    }
+
+                    bubble.classList.add('expanded');
+                    countEl.innerText = `${cluster.count} pts`;
+                    detailsEl.innerText = `Potholes reported: ${cluster.count}`;
+
+                    const prevStatus = statusEl.innerText;
+                    statusEl.innerText = 'Loading nearby roads...';
+                    getRoadGlowLayerForCluster(cluster)
+                        .then(layer => {
+                            // Only show if still expanded
+                            const el2 = marker.getElement();
+                            const bubble2 = el2 ? el2.querySelector('.cluster-bubble') : null;
+                            if (!bubble2 || !bubble2.classList.contains('expanded')) return;
+                            activeRoadGlowLayer = layer;
+                            activeRoadGlowLayer.addTo(map);
+                            statusEl.innerText = prevStatus;
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            statusEl.innerText = prevStatus;
+                        });
+                }
+            });
+
+            // Dialog Box List population
+            const li = document.createElement('li');
+            li.className = 'cluster-item';
+            li.innerHTML = `
+                <div>
+                    <strong style="color: #4a5568; font-size: 15px;">Cluster ${index + 1}</strong>
+                    <div class="cluster-coords">${cluster.lat.toFixed(4)}, ${cluster.lng.toFixed(4)}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="cluster-badge">${cluster.count} pts</div>
+                    <button class="delete-btn" title="Delete cluster">Delete</button>
+                </div>
+            `;
+
+            const deleteBtn = li.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', async function(evt) {
+                evt.stopPropagation();
+                deleteBtn.disabled = true;
+
+                try {
+                    const resp = await fetch('/api/clusters/delete/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ point_ids: cluster.point_ids || [] })
+                    });
+                    if (!resp.ok) throw new Error('Delete failed');
+                } catch (err) {
+                    console.error(err);
+                    deleteBtn.disabled = false;
+                    return;
+                }
+
+                // Clusters can change after deletion; easiest is a full refresh.
+                window.location.reload();
+            });
+            li.onclick = () => {
+                // Fly to coordinate and pop it open
+                map.flyTo([cluster.lat, cluster.lng], 14, { animate: true, duration: 1 });
+                setTimeout(() => marker.fire('click'), 1000);
+            };
+            clusterListEl.appendChild(li);
+        });
+
+        statusEl.innerText = `Map loaded with ${clusters.length} point clusters.`;
+    </script>
+</body>
+</html>
