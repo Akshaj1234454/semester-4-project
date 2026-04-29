@@ -193,3 +193,13 @@ python .\djngo\rough.py
 - `loc.py` — Flask location service (`/location`) for Windows
 - `phoneCode/` — YOLO pothole detector + uploader, model weights (`best.pt`)
 
+## Model Performance Metrics
+
+The embedded validation metrics from the YOLO model checkpoint are:
+- **Precision:** 83.0%
+- **Recall:** 73.1%
+- **mAP@50:** 81.4%
+- **mAP@50-95:** 50.9%
+
+![Training Metrics](phoneCode/training_metrics.png)
+
