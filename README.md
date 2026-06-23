@@ -1,11 +1,12 @@
-[📄 View Extended Project Description & near future intended iterations ](./roadwatch.pdf)
+[📄 View Extended Project Description & near future intended iterations ](./roadwatch.pdf) 
+**this is not the final version
 
 ### Demo Links
 - Live inference (model performance): [https://youtu.be/TaBGau3z3X0](https://youtu.be/TaBGau3z3X0)
 - Apparatus prototype on compromised setup
   due to hardware inavailability: [https://youtu.be/6Rtu6VWgYoY](https://youtu.be/6Rtu6VWgYoY)
 
-# Semester 4 Project — RoadWatch (Django dashboard + pothole detector)
+# RoadWatch (Django dashboard + pothole detector)
 
 This repo has three pieces that work together:
 
