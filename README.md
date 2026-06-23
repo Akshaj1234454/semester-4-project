@@ -1,5 +1,10 @@
 [📄 View Extended Project Description & near future intended iterations ](./roadwatch.pdf)
 
+### Demo Links
+- Live inference (model performance): [https://youtu.be/TaBGau3z3X0](https://youtu.be/TaBGau3z3X0)
+- Apparatus prototype on compromised setup
+  due to hardware inavailability: [https://youtu.be/6Rtu6VWgYoY](https://youtu.be/6Rtu6VWgYoY)
+
 # Semester 4 Project — RoadWatch (Django dashboard + pothole detector)
 
 This repo has three pieces that work together:
@@ -205,3 +210,7 @@ The embedded validation metrics from the YOLO model checkpoint are:
 
 ![Training Metrics](phoneCode/training_metrics.png)
 
+## Relavent links
+- Dataset used: [https://universe.roboflow.com/smartathon/new-pothole-detection](https://universe.roboflow.com/smartathon/new-pothole-detection)
+- Model Framework documentation: [https://docs.ultralytics.com](https://docs.ultralytics.com)
+- Server Framework documentation: [https://docs.djangoproject.com/en/6.0/](https://docs.djangoproject.com/en/6.0/)
