@@ -1,3 +1,5 @@
+[📄 View Extended Project Description & near future intended iterations: ](./roadwatch.pdf)
+
 # Semester 4 Project — RoadWatch (Django dashboard + pothole detector)
 
 This repo has three pieces that work together:
